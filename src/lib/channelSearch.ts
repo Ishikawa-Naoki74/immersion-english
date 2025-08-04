@@ -1,8 +1,6 @@
 import { ChannelSearchResult } from '@/types'
 
-// YouTube Data API の設定
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY
-const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3'
+// サーバーサイドAPIを使用（安全）
 
 // 購読者数をフォーマットする関数
 function formatSubscriberCount(count: string): string {
@@ -119,117 +117,88 @@ async function fallbackSearch(query: string): Promise<ChannelSearchResult[]> {
     .map(({ score, ...channel }) => channel)
 }
 
-// YouTube Data APIを使用したチャンネル検索
+// サーバーサイドAPIを使用したチャンネル検索（安全）
 export async function searchChannels(query: string): Promise<ChannelSearchResult[]> {
-  // APIキーがない場合はフォールバック
-  if (!YOUTUBE_API_KEY) {
-    console.warn('YouTube API key not found, using fallback data')
-    return fallbackSearch(query)
-  }
-
   try {
+    console.log(`YouTubeチャンネル検索: "${query}"`)
+    
     if (!query.trim()) {
       // 空の検索の場合は人気チャンネルを返す
       const popularQuery = 'english learning'
       return await searchChannels(popularQuery)
     }
 
-    // YouTube Data API でチャンネル検索
-    const searchUrl = `${YOUTUBE_API_BASE}/search?` + new URLSearchParams({
-      part: 'snippet',
-      type: 'channel',
-      q: query,
-      maxResults: '12',
-      key: YOUTUBE_API_KEY,
-      order: 'relevance'
-    })
+    const url = new URL('/api/youtube/channels/search', window.location.origin)
+    url.searchParams.set('q', query)
+    url.searchParams.set('maxResults', '12')
 
-    const searchResponse = await fetch(searchUrl)
-    if (!searchResponse.ok) {
-      throw new Error(`YouTube API search failed: ${searchResponse.status}`)
+    const response = await fetch(url.toString())
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'YouTubeチャンネル検索に失敗しました')
     }
 
-    const searchData = await searchResponse.json()
+    console.log(`YouTubeチャンネル検索完了: ${data.channels?.length || 0}件`)
     
-    if (!searchData.items || searchData.items.length === 0) {
-      return []
-    }
-
-    // チャンネルIDを取得して詳細情報を取得
-    const channelIds = searchData.items.map((item: any) => item.snippet.channelId).join(',')
-    
-    const channelsUrl = `${YOUTUBE_API_BASE}/channels?` + new URLSearchParams({
-      part: 'snippet,statistics',
-      id: channelIds,
-      key: YOUTUBE_API_KEY
-    })
-
-    const channelsResponse = await fetch(channelsUrl)
-    if (!channelsResponse.ok) {
-      throw new Error(`YouTube API channels failed: ${channelsResponse.status}`)
-    }
-
-    const channelsData = await channelsResponse.json()
-
-    // レスポンスを ChannelSearchResult 形式に変換
-    const results: ChannelSearchResult[] = channelsData.items.map((item: any) => ({
-      id: item.id,
-      name: item.snippet.title,
-      iconUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
-      description: item.snippet.description || '',
-      subscriberCount: formatSubscriberCount(item.statistics?.subscriberCount || '0'),
-      videoCount: formatVideoCount(item.statistics?.videoCount || '0')
+    // サーバーサイドAPIの形式をクライアント形式に変換
+    const results: ChannelSearchResult[] = data.channels.map((channel: any) => ({
+      id: channel.id,
+      name: channel.title,
+      iconUrl: channel.thumbnail,
+      description: channel.description,
+      subscriberCount: channel.subscriberCount ? formatSubscriberCount(channel.subscriberCount) : '0',
+      videoCount: channel.videoCount ? formatVideoCount(channel.videoCount) : '0'
     }))
 
     return results
 
   } catch (error) {
-    console.error('YouTube API error:', error)
+    console.error('YouTubeチャンネル検索エラー:', error)
     // エラーの場合はフォールバック
+    console.warn('フォールバックデータを使用します')
     return fallbackSearch(query)
   }
 }
 
-// チャンネルIDから詳細情報を取得
+// チャンネルIDから詳細情報を取得（サーバーサイドAPI使用）
 export async function getChannelById(channelId: string): Promise<ChannelSearchResult | null> {
-  // APIキーがない場合はフォールバック
-  if (!YOUTUBE_API_KEY) {
-    await new Promise(resolve => setTimeout(resolve, 200))
-    const channel = fallbackChannels.find(c => c.id === channelId)
-    return channel || null
-  }
-
   try {
-    const channelsUrl = `${YOUTUBE_API_BASE}/channels?` + new URLSearchParams({
-      part: 'snippet,statistics',
-      id: channelId,
-      key: YOUTUBE_API_KEY
-    })
+    console.log(`YouTubeチャンネル詳細取得: ${channelId}`)
+    
+    // チャンネル検索APIを使用（1件のみ取得）
+    const url = new URL('/api/youtube/channels/search', window.location.origin)
+    url.searchParams.set('q', channelId) // チャンネルIDで検索
+    url.searchParams.set('maxResults', '1')
 
-    const response = await fetch(channelsUrl)
+    const response = await fetch(url.toString())
+    const data = await response.json()
+
     if (!response.ok) {
-      throw new Error(`YouTube API failed: ${response.status}`)
+      throw new Error(data.error || 'YouTubeチャンネル情報の取得に失敗しました')
     }
 
-    const data = await response.json()
-    
-    if (!data.items || data.items.length === 0) {
+    if (!data.channels || data.channels.length === 0) {
       return null
     }
 
-    const item = data.items[0]
-    return {
-      id: item.id,
-      name: item.snippet.title,
-      iconUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
-      description: item.snippet.description || '',
-      subscriberCount: formatSubscriberCount(item.statistics?.subscriberCount || '0'),
-      videoCount: formatVideoCount(item.statistics?.videoCount || '0')
+    const channel = data.channels[0]
+    const result: ChannelSearchResult = {
+      id: channel.id,
+      name: channel.title,
+      iconUrl: channel.thumbnail,
+      description: channel.description,
+      subscriberCount: channel.subscriberCount ? formatSubscriberCount(channel.subscriberCount) : '0',
+      videoCount: channel.videoCount ? formatVideoCount(channel.videoCount) : '0'
     }
 
+    console.log(`YouTubeチャンネル詳細取得完了: ${result.name}`)
+    return result
+
   } catch (error) {
-    console.error('YouTube API error:', error)
+    console.error('YouTubeチャンネル詳細取得エラー:', error)
     // エラーの場合はフォールバック
+    console.warn('フォールバックデータを使用します')
     await new Promise(resolve => setTimeout(resolve, 200))
     const channel = fallbackChannels.find(c => c.id === channelId)
     return channel || null

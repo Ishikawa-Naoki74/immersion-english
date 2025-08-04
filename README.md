@@ -4,20 +4,51 @@ English immersion learning application built with Next.js 14 and TypeScript.
 
 ## セットアップ
 
-### YouTube Data API の設定
+### 🔐 環境変数の設定
 
-実際のYouTubeチャンネル検索を有効にするには、YouTube Data API v3 のAPIキーが必要です。
+このアプリケーションは複数のAPIを使用します。実際のサービスを利用するには、適切なAPIキーが必要です。
 
+#### 1. 環境変数ファイルのセットアップ
+
+```bash
+# .env.example を .env.local にコピー
+cp .env.example .env.local
+```
+
+#### 2. 必要なAPIキーの取得と設定
+
+**YouTube Data API v3**（動画・チャンネル検索用）
 1. [Google Cloud Console](https://console.developers.google.com/) にアクセス
 2. 新しいプロジェクトを作成または既存のプロジェクトを選択
 3. YouTube Data API v3 を有効化
 4. 認証情報を作成してAPIキーを取得
-5. プロジェクトルートに `.env.local` ファイルを作成
-6. 以下の内容を追加：
+5. APIキーに使用制限を設定（推奨）
+
+**OpenAI API**（音声認識用 - オプション）
+1. [OpenAI Platform](https://platform.openai.com/) でアカウント作成
+2. API キーを生成
+
+**Google Cloud APIs**（翻訳・音声認識用 - オプション）
+1. Google Cloud Console で必要なAPIを有効化
+2. 認証情報を作成
+
+#### 3. .env.local ファイルの設定
 
 ```bash
-NEXT_PUBLIC_YOUTUBE_API_KEY=your_youtube_api_key_here
+# YouTube API (サーバーサイド用 - 安全)
+YOUTUBE_API_KEY=your_youtube_api_key_here
+
+# OpenAI API (音声認識用 - オプション)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Google Cloud API (翻訳・音声認識用 - オプション)
+GOOGLE_CLOUD_API_KEY=your_google_cloud_api_key_here
 ```
+
+⚠️ **セキュリティ重要事項**:
+- `.env.local` ファイルは Git にコミットされません
+- APIキーは外部に漏洩しないよう注意してください
+- 詳細は [SECURITY.md](./SECURITY.md) を参照
 
 ### インストールと起動
 

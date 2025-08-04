@@ -1,1 +1,7 @@
-{}
+{
+  "/channel/[id]/page": "app/channel/[id]/page.js",
+  "/channel/[id]/videos/page": "app/channel/[id]/videos/page.js",
+  "/channel/[id]/learn/video/[videoId]/page": "app/channel/[id]/learn/video/[videoId]/page.js",
+  "/channel/[id]/learn/page": "app/channel/[id]/learn/page.js",
+  "/page": "app/page.js"
+}

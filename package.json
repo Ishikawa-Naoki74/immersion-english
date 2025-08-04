@@ -9,13 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google-cloud/translate": "^9.2.0",
     "@supabase/supabase-js": "^2.53.0",
     "@tailwindcss/line-clamp": "^0.4.4",
     "googleapis": "^154.1.0",
     "next": "14.2.5",
     "react": "^18",
     "react-dom": "^18",
-    "react-youtube": "^10.1.0"
+    "react-youtube": "^10.1.0",
+    "youtube-transcript": "^1.2.1",
+    "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
     "@types/node": "^20",
